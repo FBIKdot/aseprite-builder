@@ -1,0 +1,107 @@
+name: 手动构建
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release对应的tags'
+        required: true
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        build_type: [Release]
+        enable_ui: [on]
+        include:
+          - os: windows-latest
+            build_type: Release
+            enable_ui: on
+    steps:
+
+    - name: 获得 Release 的 Body 与仓库名称
+      id: get-content
+      shell: bash
+      run: |
+        body=$(curl -s https://api.github.com/repos/aseprite/aseprite/releases/tags/${{ github.event.inputs.tag_name }} | jq -r '.body')
+        echo "body-content=$(echo $body)" >> $GITHUB_OUTPUT 
+        echo $body
+        GITHUB_REPOSITORY="${{ github.repository }}"
+        REPO_NAME="${GITHUB_REPOSITORY#${{ github.repository_owner }}/}"
+        echo "repo-name=$(echo $REPO_NAME)" >> $GITHUB_OUTPUT 
+        echo $REPO_NAME
+
+    - uses: actions/checkout@v3
+      with:
+        repository: 'aseprite/aseprite'
+        submodules: 'recursive'
+        ref: ${{ github.event.inputs.tag_name }}
+
+    - uses: seanmiddleditch/gha-setup-ninja@master
+    - uses: ilammy/msvc-dev-cmd@v1
+
+    - name: 获取 skia 并且生成 Makefile
+      shell: bash
+      run: |
+        if [[ "${{ runner.os }}" == "Windows" ]] ; then
+          export enable_ccache=off
+        else
+          export enable_ccache=on
+        fi
+        curl -L -o skia.zip https://github.com/aseprite/skia/releases/download/m102-861e4743af/Skia-Windows-Release-x64.zip
+        7z x skia.zip -oskia
+        cmake -S . -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DENABLE_UI=${{ matrix.enable_ui }} \
+          -DENABLE_CCACHE=$enable_ccache \
+          -DLAF_BACKEND=skia \
+          -DSKIA_DIR=./skia \
+          -DSKIA_LIBRARY_DIR=./skia/out/Release-x64 \
+          -DSKIA_LIBRARY=./skia/out/Release-x64/skia.lib
+
+    - name: 编译
+      shell: bash
+      run: |
+        cd build && ninja
+    
+    - name: 获取 "libcrypto-1_1-x64.dll"
+      shell: bash 
+      run: |
+        GITHUB_REPOSITORY="${{ github.repository }}"
+        REPO_NAME="${GITHUB_REPOSITORY#${{ github.repository_owner }}/}"
+
+        curl -L -o D:/a/$REPO_NAME/$REPO_NAME/build/bin/libcrypto-1_1-x64.dll https://github.com/feenkcom/libopenssl/releases/download/v0.5.0/crypto-x86_64-pc-windows-msvc.dll
+    
+    # # 请确保是私有仓库再启用该功能
+    # - name: 上传文件到 artifact
+    #   uses: actions/upload-artifact@v3
+    #   with:
+    #     name: aseprite 
+    #     path: |
+    #       REPO_NAME=${{ steps.get-content.outputs.repo-name }}
+
+    #       D:/a/$REPO_NAME/$REPO_NAME/build/bin/data
+    #       D:/a/$REPO_NAME/$REPO_NAME/build/bin/aseprite.exe
+    #       D:/a/$REPO_NAME/$REPO_NAME/build/bin/libcrypto-1_1-x64.dll
+
+    - name: 打包
+      shell: bash
+      run: |
+        REPO_NAME=${{ steps.get-content.outputs.repo-name }}
+
+        cd D:/a/$REPO_NAME/$REPO_NAME/build/bin/
+        7z a -tzip aseprite.${{ github.event.inputs.tag_name }}.zip data aseprite.exe libcrypto-1_1-x64.dll
+        cp aseprite.${{ github.event.inputs.tag_name }}.zip D:/a/
+
+    - name: 草拟 Release 并且上传文件
+      uses: softprops/action-gh-release@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_name: ${{ github.event.inputs.tag_name }}
+        name: Aseprite ${{ github.event.inputs.tag_name }}
+        body: ${{ steps.get-content.outputs.body-content }}
+        draft: true # 为了遵守 Aseprite 的 EULA, 取消 draft 前请确保仓库为私有
+        prerelease: false
+        files: |
+          D:/a/aseprite.${{ github.event.inputs.tag_name }}.zip

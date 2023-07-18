@@ -1,0 +1,142 @@
+name: 自动检查更新与构建
+on:
+  # # 取消注释以启用自动激活
+  # schedule:
+  #   - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      match: ${{ steps.check-tags.outputs.match }}
+      tag: ${{ steps.target-tag.outputs.tag }}
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: 获取最后的tags 
+      id: target-tag
+      run: |
+        tag=$(curl -s https://api.github.com/repos/aseprite/aseprite/tags | jq -r '.[0].name')
+        # echo "::set-output name=tag::$tag"
+        echo "tag=$(echo $tag)" >> $GITHUB_OUTPUT
+    - name: 获取本仓库最后的tags
+      id: current-tag
+      run: |
+        tag=$(curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }} " -s https://api.github.com/repos/${{ github.repository }}/tags | jq -r '.[0].name')
+        echo "tag=$(echo $tag)" >> $GITHUB_OUTPUT
+    - name: 比对tags
+      id: check-tags
+      run: |
+        if [ "${{ steps.target-tag.outputs.tag }}" = "${{ steps.current-tag.outputs.tag }}" ] ; then
+          echo "Tags match, skipping downstream job"
+          echo "match=true" >> $GITHUB_OUTPUT
+        else
+          echo "Tags do not match, running downstream job"
+          echo "match=false" >> $GITHUB_OUTPUT
+        fi
+
+  build:
+    needs: check
+    if: ${{ needs.check.outputs.match }}  == 'false'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        build_type: [Release]
+        enable_ui: [on]
+        include:
+          - os: windows-latest
+            build_type: Release
+            enable_ui: on
+
+    steps:
+
+    - name: 获得 Release 的 Body 与仓库名称
+      id: get-content
+      shell: bash
+      run: |
+        body=$(curl -s https://api.github.com/repos/aseprite/aseprite/releases/tags/${{ needs.check.outputs.tag }} | jq -r '.body')
+        echo "body-content=$(echo $body)" >> $GITHUB_OUTPUT 
+        echo $body
+        GITHUB_REPOSITORY="${{ github.repository }}"
+        REPO_NAME="${GITHUB_REPOSITORY#${{ github.repository_owner }}/}"
+        echo "repo-name=$(echo $REPO_NAME)" >> $GITHUB_OUTPUT 
+        echo $REPO_NAME
+
+    - uses: actions/checkout@v3
+      with:
+        repository: 'aseprite/aseprite'
+        submodules: 'recursive'
+        ref: ${{ needs.check.outputs.tag }}
+
+    - uses: seanmiddleditch/gha-setup-ninja@master
+    - uses: ilammy/msvc-dev-cmd@v1
+
+    - name: 获取 skia 并且生成 Makefile
+      shell: bash
+      run: |
+        if [[ "${{ runner.os }}" == "Windows" ]] ; then
+          export enable_ccache=off
+        else
+          export enable_ccache=on
+        fi
+        curl -L -o skia.zip https://github.com/aseprite/skia/releases/download/m102-861e4743af/Skia-Windows-Release-x64.zip
+        7z x skia.zip -oskia
+        cmake -S . -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DENABLE_UI=${{ matrix.enable_ui }} \
+          -DENABLE_CCACHE=$enable_ccache \
+          -DLAF_BACKEND=skia \
+          -DSKIA_DIR=./skia \
+          -DSKIA_LIBRARY_DIR=./skia/out/Release-x64 \
+          -DSKIA_LIBRARY=./skia/out/Release-x64/skia.lib
+
+    - name: 编译
+      shell: bash
+      run: |
+        cd build && ninja
+    
+    - name: 获取 "libcrypto-1_1-x64.dll"
+      shell: bash 
+      run: |
+        GITHUB_REPOSITORY="${{ github.repository }}"
+        REPO_NAME="${GITHUB_REPOSITORY#${{ github.repository_owner }}/}"
+
+        curl -L -o D:/a/$REPO_NAME/$REPO_NAME/build/bin/libcrypto-1_1-x64.dll https://github.com/feenkcom/libopenssl/releases/download/v0.5.0/crypto-x86_64-pc-windows-msvc.dll
+
+    # # 为了遵守 Aseprite 的 EULA, 请确保仓库为私有再启用该功能
+    # - name: 上传文件到 artifact
+    #   uses: actions/upload-artifact@v3
+    #   with:
+    #     name: aseprite 
+    #     path: |
+    #       REPO_NAME=${{ steps.get-content.outputs.repo-name }}
+
+    #       D:/a/$REPO_NAME/$REPO_NAME/build/bin/data
+    #       D:/a/$REPO_NAME/$REPO_NAME/build/bin/aseprite.exe
+    #       D:/a/$REPO_NAME/$REPO_NAME/build/bin/libcrypto-1_1-x64.dll
+
+    - name: 打包
+      shell: bash
+      run: |
+        GITHUB_REPOSITORY="${{ github.repository }}"
+        REPO_NAME="${GITHUB_REPOSITORY#${{ github.repository_owner }}/}"
+
+        cd D:/a/$REPO_NAME/$REPO_NAME/build/bin/
+        7z a -tzip aseprite.${{ needs.check.outputs.tag }}.zip data aseprite.exe libcrypto-1_1-x64.dll
+        cp aseprite.${{ needs.check.outputs.tag }}.zip D:/a/
+
+    - name: 草拟 Release 并且上传文件
+      uses: softprops/action-gh-release@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_name: ${{ needs.check.outputs.tag }}
+        name: Aseprite ${{ needs.check.outputs.tag }}
+        body: ${{ steps.get-content.outputs.body-content }}
+        draft: true # 为了遵守 Aseprite 的 EULA, 取消 draft 前请确保仓库为私有
+        prerelease: false
+        files: |
+          D:/a/aseprite.${{ needs.check.outputs.tag }}.zip

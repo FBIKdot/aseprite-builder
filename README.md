@@ -6,7 +6,7 @@
 
 为了遵守 Aseprite 的 EULA, 此 workflow 不会将编译后的二进制文件上传到公共可访问空间. 编译后的二进制文件将存储于`Releases`的`draft`仅供仓库所有者可见. 
 
-编译后的二进制文件因为缺失`libcrypto-1_1-x64.dll`无法正常运行, 目前以个人能力不知道如何在编译时解决. workflow将会从<https://github.com/feenkcom/libopenssl/releases>获取缺少的dll并且一并打包, 如果不需要可根据情况自习更换, 删除或者修改workflow.
+编译后的二进制文件因为缺失`libcrypto-1_1-x64.dll`无法正常运行, 目前以个人能力不知道如何在编译时解决. workflow将会从<https://github.com/feenkcom/libopenssl/releases>获取缺少的dll并且一并打包, 如果不需要可根据情况自行替换, 删除它或者修改workflow.
 
 # 使用方法
 

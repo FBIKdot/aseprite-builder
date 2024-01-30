@@ -12,6 +12,7 @@ Language: [English](../README.md) | 中文
 编译后的二进制文件因为缺失`libcrypto-1_1-x64.dll`无法正常运行, 目前以个人能力不知道如何在编译时解决. workflow 将会从<https://github.com/feenkcom/libopenssl/releases>获取缺少的 dll 并且一并打包, 如果不需要可根据情况自行替换, 删除它或者修改 workflow.
 
 如果你觉得有用的话点个 Star 吧!
+
 ![](https://moe-counter.glitch.me/get/@FBIK.aseprite-window-x64-builder)
 
 # 使用方法

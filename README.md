@@ -11,6 +11,7 @@ To comply with the Aseprite EULA, this workflow will not upload the compiled bin
 The compiled binary files cannot run without `libcrypto-1_1-x64.dll`, and currently, I don't know how to resolve this during compilation. The workflow will retrieve this missing DLL from https://github.com/feenkcom/libopenssl/releases and package it together. If you don't need it, you can replace, delete, or modify it according to your needs.
 
 Star this repository if you think it is useful!
+
 ![](https://moe-counter.glitch.me/get/@FBIK.aseprite-window-x64-builder)
 
 # Usage

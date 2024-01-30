@@ -1,9 +1,9 @@
-name: 手动构建
+name: Build a specified version
 on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release对应的tags'
+        description: 'the tag(version) of the Aseprite'
         required: true
 jobs:
   build:

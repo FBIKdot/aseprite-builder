@@ -1,28 +1,39 @@
 # aseprite-window-x64-builder
-这是两个 GitHub Actions 的自动化 workflow, 自动或半自动为 Windows 构建 x64 位的 Aseprite.
-通过使用 GitHub 操作, 无需手动编译, 并且不包含恶意软件.
 
-请在使用前查看 [Aseprite 的 EULA](https://github.com/aseprite/aseprite/blob/main/EULA.txt).
+Language: English | [中文](./locales/zh-cn.md)
 
-为了遵守 Aseprite 的 EULA, 此 workflow 不会将编译后的二进制文件上传到公共可访问空间. 编译后的二进制文件将存储于`Releases`的`draft`仅供仓库所有者可见. 
+These are 2 GitHub Workflow that builds Aseprite for Windows x64 bit, either building a specified version or automatically building of the lastest version. By using GitHub Actions, there is no need for manual compilation, and it does not include any malicious software.
 
-编译后的二进制文件因为缺失`libcrypto-1_1-x64.dll`无法正常运行, 目前以个人能力不知道如何在编译时解决. workflow将会从<https://github.com/feenkcom/libopenssl/releases>获取缺少的dll并且一并打包, 如果不需要可根据情况自行替换, 删除它或者修改workflow.
+Please review the [Aseprite EULA](https://github.com/aseprite/aseprite/blob/main/EULA.txt) before using it.
 
-# 使用方法
+To comply with the Aseprite EULA, this workflow will not upload the compiled binary files to a publicly accessible space. The compiled binary files will be stored in the Releases as draft and only visible to the repository owner.
 
-Fork 本仓库, 打开Fork仓库的`Setting-Actions-General`页面, 确保`Workflow permissions`选择了`Read and write permissions`. 
+The compiled binary files cannot run without `libcrypto-1_1-x64.dll`, and currently, I don't know how to resolve this during compilation. The workflow will retrieve this missing DLL from https://github.com/feenkcom/libopenssl/releases and package it together. If you don't need it, you can replace, delete, or modify it according to your needs.
 
-## 手动构建
+Star this repository if you think it is useful!
+![](https://moe-counter.glitch.me/get/@FBIK.aseprite-window-x64-builder)
 
-访问<https://github.com/aseprite/aseprite/releases>, 获得欲构建的`Release`对应`tags`. 接着打开Fork仓库的`Actions`页面, 左侧选择`手动构建`workflow, 点击`Run workflow`然后将刚刚获得的`tags`填写在`Release对应的tags`提示下方, 点击`Run workflow`后等待`workflow`执行完毕. 打开Fork仓库的`Code-Releases`, 在刚刚生成的`draft`下方的附件处下载.
+# Usage
 
-## 自动检查更新与构建
+Fork this repository and go to the Settings-Actions-General page of the forked repository.
 
-如果Fork仓库当前版本与Aseprite的最新Releases不同, 则自动获取最新tags然后执行编译并且在Fork仓库的`Code-Releases`生成`draft`.
+Ensure these GitHub repository settings are configured correctly:
 
-`自动检查更新与构建`workflow会在UTC(协调世界时)`0:00`, 及北京时间(UTC+8)`8:00`时自动执行, 如需启用请编辑`.github/workflows/auto-build.yml`, 将第三行到第五行的注释取消:
-~~~
+-   `Workflow permissions` is set to `Read and write permissions`
+-   Allow all actions and reusable workflows
+
+## Build a specified version
+
+Visit https://github.com/aseprite/aseprite/releases to get the `tag`, whose release is your need. Then, open the Actions page of the forked repository, select `Build a specified version` on the left side, click Run workflow, and fill in the tags under the `the tag(version) of the Aseprite`. After clicking Run workflow, wait for the workflow to complete. Go to the Code-Releases of the forked repository and download the attachment under the newly generated draft.
+
+## Automatic check update and Build
+
+This workflow will check the lastest tag from local repository and Aseprite Offical repository. If the current version of the forked repository is different from the latest Aseprite Releases, it will automatically retrieve the latest tags and perform the compilation. It will generate a draft in the Code-Releases of the forked repository.
+
+This workflow will automatically execute at Beijing time (UTC+8) 8:00. To enable it, edit .github/workflows/auto-build.yml and uncomment lines 3 to 5:
+
+```
 on:
   schedule:
   - cron: '0 0 * * *'
-~~~
+```

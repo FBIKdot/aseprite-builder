@@ -1,6 +1,7 @@
-name: 自动检查更新与构建
+name: Automatic check update and Build
 on:
   # # 取消注释以启用自动激活
+  # # Uncomment it to make this workflow automatic
   # schedule:
   #   - cron: '0 0 * * *'
   workflow_dispatch:

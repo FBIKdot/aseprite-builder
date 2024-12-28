@@ -2,6 +2,9 @@
 
 Language: English | [中文](./locales/zh-cn.md)
 
+> [!WARNING]
+> Building the latest beta version of Aseprite (e.g., `v1.3.11-beta2`) will fail because it uses a new pre-built binaries of Skia, which is still work in progress.
+
 These are 2 GitHub Workflow that builds Aseprite for Windows x64 bit, either building a specified version or automatically building of the lastest version. By using GitHub Actions, there is no need for manual compilation, and it does not include any malicious software.
 
 Please review the [Aseprite EULA](https://github.com/aseprite/aseprite/blob/main/EULA.txt) before using it.

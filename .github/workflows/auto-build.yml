@@ -37,13 +37,28 @@ jobs:
           echo "Tags do not match, running downstream job"
           echo "match=true" >> $GITHUB_OUTPUT
         fi
+    - name: 判断tag是否包含"beta"
+      id: check-beta
+      run: |
+        tag="${{ steps.target-tag.outputs.tag }}"
+        if [[ "$tag" == *"beta"* ]]; then
+          echo "it's beta, skipping build"
+          echo "is_beta=true" >> $GITHUB_OUTPUT
+        else
+          echo "it's not beta, proceeding with build"
+          echo "is_beta=false" >> $GITHUB_OUTPUT
+        fi
     - name: 是否执行build
       run: |
-        echo ${{ steps.check-tags.outputs.match }}
+        if [ "${{ needs.check.outputs.match }}" == "true" ] && [ "${{ needs.check.outputs.is_beta }}" == "false" ]; then
+          echo "true"
+        else
+          echo "false"
+        fi
 
   build:
     needs: check
-    if: needs.check.outputs.match == 'true'
+    if: needs.check.outputs.match == 'true' && needs.check.outputs.is_beta == 'false'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
